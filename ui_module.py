@@ -53,26 +53,49 @@ class BaseHTML:
             m.text = module[settings.M_NAME] + ': ' + f'{str(app.get_c_prop(settings.C_USER_NAME))} ({str(app.get_c_prop(settings.C_USER_ROLE))})'
 
         # LOGOFF button
-        log_off = et.SubElement(p,
-                                'button title="Завершить работу"',
-                                attrib={
-                                    'type': 'submit',
-                                    'name': settings.LOGOFF_BUTTON,
-                                    'class': 'right btn-icon'
-                                })
-        i = et.SubElement(log_off, 'i', {'class': 'fa fa-user-circle-o fa-lg'})  # fa-user-o
-        i.text = '\n'  # !!!Обязательно!!! Иначе, создает одиночный тэг <i .... />, вместо парного <i> ... </i>
+        btn = et.SubElement(p,
+                            'button class="material-symbols-outlined right btn-t-cell" title="Завершить работу"',
+                            {
+                                'style': 'padding-inline: 0px; margin-left: 0; margin-right: 0; padding-left: 1px',
+                                'name': settings.LOGOFF_BUTTON,
+                            })
+        btn.text = 'logout'
+        # log_off = et.SubElement(p,
+        #                         'button title="Завершить работу"',
+        #                         attrib={
+        #                             'type': 'submit',
+        #                             'name': settings.LOGOFF_BUTTON,
+        #                             'class': 'right btn-icon'
+        #                         })
+        # i = et.SubElement(log_off, 'i', {'class': 'fa fa-user-circle-o fa-lg'})  # fa-user-o
+        # i.text = '\n'  # !!!Обязательно!!! Иначе, создает одиночный тэг <i .... />, вместо парного <i> ... </i>
+
+        # DEBUG button
+        btn = et.SubElement(p,
+                            'button class="material-symbols-outlined right btn-t-cell" title="Состояние текущей сессии"',
+                            {
+                                'style': 'padding-inline: 0px; margin-left: 0; margin-right: 0; padding-left: 1px',
+                                'name': settings.DEBUG_BUTTON,
+                            })
+        btn.text = 'pest_control'
 
         # REFRESH button
-        log_off = et.SubElement(p,
-                                'button title="Обновить"',
-                                attrib={
-                                    'type': 'submit',
-                                    'name': settings.UPDATE_BUTTON,
-                                    'class': 'right btn-icon'
-                                })
-        i = et.SubElement(log_off, 'i', {'class': 'fa fa-refresh fa-lg'})
-        i.text = '\n'
+        btn = et.SubElement(p,
+                            'button class="material-symbols-outlined right btn-t-cell" title="Обновить"',
+                            {
+                                'style': 'padding-inline: 0px; margin-left: 0; margin-right: 0; padding-left: 1px',
+                                'name': settings.UPDATE_BUTTON,
+                            })
+        btn.text = 'sync'
+        # log_off = et.SubElement(p,
+        #                         'button title="Обновить"',
+        #                         attrib={
+        #                             'type': 'submit',
+        #                             'name': settings.UPDATE_BUTTON,
+        #                             'class': 'right btn-icon'
+        #                         })
+        # i = et.SubElement(log_off, 'i', {'class': 'fa fa-refresh fa-lg'})
+        # i.text = '\n'
 
         # Добавляем навигацию по сайту
         #

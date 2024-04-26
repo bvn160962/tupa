@@ -42,12 +42,21 @@ def init_module(request):
     # Определить ip адрес
     # ip = get_client_ip(request)
 
-    # Get form values
+    # Получить значения формы
     values = request.form
     util.log_debug(f'FORM={values}')
 
-    # Check DB connection
-    html_test_db = pg_module.test_connection()
+    # Проверка доступности БД
+    # Пропустить ,если нажата DEBUG
+    debug_mode = False
+    for key in values:
+        if key == settings.DEBUG_BUTTON:
+            debug_mode = True
+
+    if debug_mode:
+        html_test_db = ''
+    else:
+        html_test_db = pg_module.test_connection()
 
     return values, html_test_db
 
@@ -92,6 +101,44 @@ def logoff(module):
     app.clear_cache()
 
     return redirect(url_for(settings.M_LOGIN, module=module))
+
+
+def debug(module):
+    title = 'Содержимое переменных текущей сессии'
+    s_list = [
+        ('Имя переменной', 'Значение'),
+        ('*** CACHE ***', ''),
+        (settings.C_WEEK, str(app.get_c_prop(settings.C_WEEK))),
+        (settings.C_DATE, str(app.get_c_prop(settings.C_DATE))),
+        (settings.C_TIMESHEET_ID, str(app.get_c_prop(settings.C_TIMESHEET_ID))),
+        (settings.C_PROJECT_ID, str(app.get_c_prop(settings.C_PROJECT_ID))),
+        (settings.C_TSH_BTN_VALUE, str(app.get_c_prop(settings.C_TSH_BTN_VALUE))),
+        (settings.C_USER_ID, str(app.get_c_prop(settings.C_USER_ID))),
+        (settings.C_USER_NAME, str(app.get_c_prop(settings.C_USER_NAME))),
+        (settings.C_USER_ROLE, str(app.get_c_prop(settings.C_USER_ROLE))),
+        ('*** SETTINGS ***', ''),
+        ('DBG_DO_LOGIN', str(settings.DBG_DO_LOGIN)),
+        ('SHOW_EMPTY_WEEK', str(settings.SHOW_EMPTY_WEEK)),
+        ('IS_WINDOWS', str(settings.IS_WINDOWS)),
+        ('LOG_DIR', str(settings.LOG_DIR)),
+        ('LOG_FILE_NAME', str(settings.LOG_FILE_NAME)),
+        ('LOG_FILE_MODE', str(settings.LOG_FILE_MODE)),
+        ('LOG_FILE_LEVEL', str(settings.LOG_FILE_LEVEL)),
+        ('*** POSTGRES ***', ''),
+        ('PG_HOST', str(pg_module.PG_HOST)),
+        ('PG_PORT', str(pg_module.PG_PORT)),
+        ('PG_USER', str(pg_module.PG_USER)),
+        ('PG_DATABASE', str(pg_module.PG_DATABASE)),
+    ]
+
+    if pg_module.DB_CONNECT is not None:
+        s_list.append(('*** DATABASE ***', ''))
+        s_list.append(('DB_VERSION', str(pg_module.DB_CONNECT.server_version)))
+        s_list.append(('DB_STATUS', str(pg_module.DB_CONNECT.status)))
+        s_list.append(('DB_TR_STATUS', str(pg_module.DB_CONNECT.get_transaction_status())))
+
+
+    return ui_module.create_info_html(settings.INFO_TYPE_INFORMATION, s_list, module, title)
 
 
 # TIMESHEETS BLOCK
@@ -247,9 +294,12 @@ def timesheets_post(values):
         # Нажата кнопка LOGOFF
         #
         if value == settings.LOGOFF_BUTTON:
-            # тестирование метода!!!
-            # data_module.get_entries_for_approval(102)
             html = logoff(settings.M_TIMESHEETS)
+
+        # Нажата кнопка DEBUG
+        #
+        if value == settings.DEBUG_BUTTON:
+            html = debug(settings.M_TIMESHEETS)
 
         # Нажата кнопка REFRESH
         #
@@ -443,6 +493,10 @@ def projects_post(values):
         if value == settings.LOGOFF_BUTTON:
             return logoff(settings.M_PROJECTS)
 
+        # Нажата кнопка DEBUG
+        #
+        if value == settings.DEBUG_BUTTON:
+            html = debug(settings.M_PROJECTS)
         # Нажата кнопка REFRESH
         #
         if value == settings.UPDATE_BUTTON:
@@ -612,6 +666,10 @@ def users_post(values):
         if value == settings.LOGOFF_BUTTON:
             return logoff(settings.M_USERS)
 
+        # Нажата кнопка DEBUG
+        #
+        if value == settings.DEBUG_BUTTON:
+            html = debug(settings.M_USERS)
         # Нажата кнопка REFRESH
         #
         if value == settings.UPDATE_BUTTON:
@@ -713,6 +771,10 @@ def approvement_post(values):
         if value == settings.LOGOFF_BUTTON:
             return logoff(settings.M_APPROVEMENT)
 
+        # Нажата кнопка DEBUG
+        #
+        if value == settings.DEBUG_BUTTON:
+            html = debug(settings.M_APPROVEMENT)
         # Нажата кнопка REFRESH
         #
         if value == settings.UPDATE_BUTTON:

@@ -105,6 +105,7 @@ WEEK_BUTTON_CURRENT = 'current_week_btn'
 UPDATE_BUTTON = 'update_btn'
 LOGOFF_BUTTON = 'logoff_btn'
 HIDEINFO_BUTTON = 'hideinfo_btn'
+DEBUG_BUTTON = 'debug_btn'
 
 # Name для login диалога
 #

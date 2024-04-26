@@ -20,12 +20,14 @@ PG_PORT = '5432'
 PG_DATABASE = 'timesheets_db'
 PG_USER = 'timesheets_user'
 
+
 # Создать соединение с БД, если еще не установлено
 #
 def get_connect():
     global DB_CONNECT
 
     try:
+
         if DB_CONNECT is None:
             util.log_info('DB_Connect...')
             DB_CONNECT = psycopg2.connect(host=PG_HOST, port=PG_PORT, dbname=PG_DATABASE, user=PG_USER)  #, password=PG_PASSWORD)
