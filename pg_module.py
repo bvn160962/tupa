@@ -72,7 +72,7 @@ def test_connection():
 
 class Entries:
 
-    SQL_ONE_ENTRY = f'Select {settings.F_TSH_ALL_ID} From ts_entries Where {settings.F_TSH_ID} = %s'
+    SQL_GET_ENTRY_BY_ID = f'Select {settings.F_TSH_ALL_ID} From ts_entries Where {settings.F_TSH_ID} = %s'
 
     SQL_INSERT_ENTRY = f'Insert INTO ts_entries ({settings.F_TSH_ALL}) \
                        VALUES (%s, %s, %s, %s, %s, %s, %s)\
@@ -104,7 +104,13 @@ class Entries:
                         Set {settings.F_TSH_STATUS} = %s, {settings.F_TSH_COMMENT} = %s \
                         Where {settings.F_TSH_ID} in %s\
                        '
-
+    SQL_GET_ENTRIES_BY_USER_NAME = (f'Select {settings.F_TSH_COMMENT}, {settings.F_TSH_DATE}, {settings.F_TSH_HOURS}, '
+                                    f'{settings.F_TSH_NOTE}, {settings.F_TSH_STATUS}, {settings.F_PRJ_NAME} '
+                                    f'From ts_entries e, ts_users u, ts_projects p '
+                                    f'Where {settings.F_USR_NAME} = %s '
+                                    f'And {settings.F_TSH_USER_ID} = {settings.F_USR_ID} '
+                                    f'And {settings.F_TSH_PRJ_ID} = {settings.F_PRJ_ID}'
+                                    )
 
     @classmethod
     def get_entries(cls, s_date=None, e_date=None, user_id=None):
@@ -138,7 +144,7 @@ class Entries:
 
             conn = get_connect()
             with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
-                curs.execute(cls.SQL_ONE_ENTRY, (tsh_id,))
+                curs.execute(cls.SQL_GET_ENTRY_BY_ID, (tsh_id,))
                 return curs.fetchall()
 
         except Exception as ex:
@@ -240,6 +246,23 @@ class Entries:
                     raise ex
 
                 curs.execute('commit')
+
+    @classmethod
+    def get_entries_by_user_name(cls, user_name=None):
+        try:
+            # util.log_debug(f'get_entries_by_user_name: for user_name={user_name}')
+            if user_name is None:
+                raise Exception('user_name is None')
+
+            conn = get_connect()
+            with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
+                curs.execute(cls.SQL_GET_ENTRIES_BY_USER_NAME, (user_name,))
+                return curs.fetchall()
+
+        except Exception as ex:
+            util.log_error(f'Error on Select Entries for user_name={user_name}: ({ex})')
+            raise ex
+
 
 
 class Projects:

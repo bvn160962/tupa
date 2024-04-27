@@ -9,6 +9,9 @@ import data_module
 
 # COMMON BLOCK
 #
+
+# Определить ip клиента
+#
 # def get_client_ip(request):
 #     # Get client ip
 #     ip = request.environ.get('REMOTE_ADDR')

@@ -7,6 +7,30 @@ import util_module as util
 
 # TIMESHEETS
 #
+
+
+def get_entries_by_user_name(user_name):
+    entries = pg_module.Entries()
+    entries_data = entries.get_entries_by_user_name(user_name)
+
+    data = {}
+    cnt = 0
+    for e in entries_data:
+        tsh_note = '' if settings.F_TSH_NOTE is None else settings.F_TSH_NOTE
+        tsh_comment = '' if settings.F_TSH_COMMENT is None else settings.F_TSH_COMMENT
+        data[str(cnt)] = {
+            settings.F_TSH_STATUS: str(getattr(e, settings.F_TSH_STATUS)),
+            settings.F_TSH_DATE: str(getattr(e, settings.F_TSH_DATE)),
+            settings.F_PRJ_NAME: str(getattr(e, settings.F_PRJ_NAME)),
+            settings.F_TSH_HOURS: str(getattr(e, settings.F_TSH_HOURS)),
+            settings.F_TSH_NOTE: str(getattr(e, tsh_note)),
+            settings.F_TSH_COMMENT: str(getattr(e, tsh_comment))
+        }
+        cnt += 1
+
+    # return data
+
+
 def get_data(user_id=None, week=None):
     time_sheets_data = get_all_entries(user_id=user_id, week=week)
     return time_sheets_data

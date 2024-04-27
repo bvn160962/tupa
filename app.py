@@ -4,6 +4,7 @@ import traceback
 
 from flask import Flask, request, redirect, url_for, session
 
+import data_module
 import ui_module
 import settings
 import util_module as util
@@ -265,6 +266,28 @@ def users():
         traceback.print_exc()
         util.log_error(f'{ex}')
         return ui_module.create_info_html(msg=str(ex), module=settings.M_USERS, i_type=settings.INFO_TYPE_ERROR)
+
+
+#  API: Список записей по имени пользователя
+#
+@application.route(settings.API_TIMESHEETS_BY_USER, methods=['GET'])
+def api(user_name):
+    try:
+
+        # GET
+        #
+        if request.method == 'GET':
+            util.log_info(f'API_TIMESHEETS_BY_USER: {user_name}')
+            data = data_module.get_entries_by_user_name(user_name)
+
+            if data is None:
+                raise Exception('Empty data')
+            return data
+
+    except Exception as ex:
+        traceback.print_exc()
+        util.log_error(f'{ex}')
+        return {'Error': f'{ex}'}
 
 
 #

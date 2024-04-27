@@ -45,6 +45,8 @@ M_NAME = 'name'
 M_URL = 'url'
 M_TITLE = 'title'
 
+API_TIMESHEETS_BY_USER = '/api/timesheets/<user_name>'
+
 MODULES = {
     M_TIMESHEETS: {M_NAME: 'Табель', M_URL: '/timesheets', M_TITLE: 'Учет отработанного времени'},
     M_APPROVEMENT: {M_NAME: 'Согласование', M_URL: '/approvement', M_TITLE: 'Согласование отработанного времени'},
