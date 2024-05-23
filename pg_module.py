@@ -11,6 +11,7 @@ import util_module as util
 DB_CONNECT = None
 
 if settings.IS_WINDOWS:
+    # PG_HOST = '192.168.62.71'  # VM office
     PG_HOST = '192.168.1.219'  # VM home
     # PG_HOST = '127.0.0.1'    # Docker Desktop
 else:
@@ -596,6 +597,38 @@ class Users:
             util.log_error(f'Error on getting user references in timesheets for user id={usr_id}: ({ex})')
             raise ex
 
+
+class Parameters:
+
+    SQL_GET_PARAM_VALUE = f'Select {settings.F_PRM_VALUE} From ts_parameters Where {settings.F_PRM_NAME} = %s'
+
+    SQL_UPDATE_PARAM = f'Update ts_parameters Set {settings.F_PRM_VALUE} = %s Where {settings.F_PRM_NAME} = %s'
+
+    @classmethod
+    def get_param(cls, p_name):
+        try:
+            conn = get_connect()
+            with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
+                curs.execute(cls.SQL_GET_PARAM_VALUE, (p_name,))
+                return curs.fetchall()
+
+        except Exception as ex:
+            util.log_error(f'Error on getting param: {p_name}: ({ex})')
+            raise ex
+
+    @classmethod
+    def update_param(cls, p_name, p_value):
+        util.log_debug(f'update_param: {p_name}={p_value}')
+        conn = get_connect()
+        with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
+            try:
+                curs.execute(cls.SQL_UPDATE_PARAM, (p_value, p_name))
+            except Exception as ex:
+                util.log_error(f'Error on Update param: {p_name}={p_value}: ({ex})')
+                curs.execute('rollback')
+                raise ex
+
+            curs.execute('commit')
 
 
 

@@ -14,11 +14,15 @@ INPUT_COMMENT_NAME = 'inp_comment'
 SELECT_STATUS_NAME = 'selected_status'
 SELECT_PROJECT_NAME = 'selected_project'
 
+FORM_HEIGHT = '500px'
+
 
 class BaseHTML:
 
-    def __init__(self, title, module):
+    def __init__(self, title, module, err_message=''):
         # util.log_debug(f'BaseHTML: New(title={title})')
+
+        # dt = et.ProcessingInstruction('!DOCTYPE', 'html')
         self.__html = et.Element('html', {'lang': 'ru'})
 
         # HEAD
@@ -33,27 +37,41 @@ class BaseHTML:
         et.SubElement(self.__head, 'link', {"rel": "stylesheet", "href": 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined'})
         # et.SubElement(self.__head, 'meta', attrib={"name": "viewport", "content": "min-width=870px, initial-scale=1"})
 
+        # et.SubElement(self.__head, 'script', {'src': 'static/js/main.js'})
+
         t_title = et.SubElement(self.__head, 'title')
         t_title.text = title
 
         # BODY
-        self.__body = et.SubElement(self.__html, 'body', {'style': 'min-height: 400px;'})  # После этой высоты появляется прокрутка
+        self.__body = et.SubElement(self.__html, 'body', {'style': f'min-height: {FORM_HEIGHT}; margin-top: 0;'})  # После этой высоты появляется прокрутка
+
+        # MODAL CONFIRMATION DIALOG
+        if util.use_modal_confirmation_dialog():
+            self.__confirm_message_lab = add_confirm_dialog(self.__body)
+
+        # MODAL INFO MESSAGE DIALOG
+        if util.use_message_dialog():
+            self.__message_lab = add_message_dialog(self.__body, message=err_message)
 
         # FORM
         self.__form = et.SubElement(self.__body, 'form', attrib={'name': 'form', 'method': 'POST'})
 
-        p = et.SubElement(self.__form, 'p class="p_gray"')
+        # SCRIPT
+        self.__script = et.SubElement(self.__body, 'script', {'src': 'static/js/main.js'})
+        self.__script.text = '\n'
+
         # MODULE
-        m = et.SubElement(p, 'a style="margin:10px; font-weight: 200;"')
+        header = et.SubElement(self.__form, 'header class="head_style sticky"', {'style': 'margin-top: 0;'})
+        m = et.SubElement(header, 'a', {'style': 'margin:20px; font-weight: 200;'})
 
         # INFO
-        if  module == '':
-            m.text = ''
+        if module == '':
+            m.text = '()'
         else:
             m.text = module[settings.M_NAME] + ': ' + f'{str(app.get_c_prop(settings.C_USER_NAME))} ({str(app.get_c_prop(settings.C_USER_ROLE))})'
 
         # LOGOFF button
-        btn = et.SubElement(p,
+        btn = et.SubElement(header,
                             'button class="material-symbols-outlined right btn-t-cell" title="Завершить работу"',
                             {
                                 'style': 'padding-inline: 0px; margin-left: 0; margin-right: 0; padding-left: 1px',
@@ -71,7 +89,7 @@ class BaseHTML:
         # i.text = '\n'  # !!!Обязательно!!! Иначе, создает одиночный тэг <i .... />, вместо парного <i> ... </i>
 
         # DEBUG button
-        btn = et.SubElement(p,
+        btn = et.SubElement(header,
                             'button class="material-symbols-outlined right btn-t-cell" title="Состояние текущей сессии"',
                             {
                                 'style': 'padding-inline: 0px; margin-left: 0; margin-right: 0; padding-left: 1px',
@@ -80,7 +98,7 @@ class BaseHTML:
         btn.text = 'pest_control'
 
         # REFRESH button
-        btn = et.SubElement(p,
+        btn = et.SubElement(header,
                             'button class="material-symbols-outlined right btn-t-cell" title="Обновить"',
                             {
                                 'style': 'padding-inline: 0px; margin-left: 0; margin-right: 0; padding-left: 1px',
@@ -100,27 +118,27 @@ class BaseHTML:
         # Добавляем навигацию по сайту
         #
         if util.is_module_available(settings.M_APPROVEMENT):
-            b = et.SubElement(p,
+            b = et.SubElement(header,
                               f'a title="{settings.MODULES[settings.M_APPROVEMENT][settings.M_TITLE]}"',
-                              attrib={'href': settings.MODULES[settings.M_APPROVEMENT][settings.M_URL], 'class': 'right btn-head'})
+                              attrib={'href': settings.MODULES[settings.M_APPROVEMENT][settings.M_URL], 'class': 'right btn-head border-left border-right'})
             b.text = settings.MODULES[settings.M_APPROVEMENT][settings.M_NAME]
 
         if util.is_module_available(settings.M_USERS):
-            b = et.SubElement(p,
+            b = et.SubElement(header,
                               f'a title="{settings.MODULES[settings.M_USERS][settings.M_TITLE]}"',
-                              attrib={'href': settings.MODULES[settings.M_USERS][settings.M_URL], 'class': 'right btn-head'})
+                              attrib={'href': settings.MODULES[settings.M_USERS][settings.M_URL], 'class': 'right btn-head border-left'})
             b.text = settings.MODULES[settings.M_USERS][settings.M_NAME]
 
         if util.is_module_available(settings.M_PROJECTS):
-            b = et.SubElement(p,
+            b = et.SubElement(header,
                               f'a title="{settings.MODULES[settings.M_PROJECTS][settings.M_TITLE]}"',
-                              attrib={'href': settings.MODULES[settings.M_PROJECTS][settings.M_URL], 'class': 'right btn-head'})
+                              attrib={'href': settings.MODULES[settings.M_PROJECTS][settings.M_URL], 'class': 'right btn-head border-left'})
             b.text = settings.MODULES[settings.M_PROJECTS][settings.M_NAME]
 
-        if util.is_module_available( settings.M_TIMESHEETS):
-            b = et.SubElement(p,
+        if util.is_module_available(settings.M_TIMESHEETS):
+            b = et.SubElement(header,
                               f'a title="{settings.MODULES[settings.M_TIMESHEETS][settings.M_TITLE]}"',
-                              attrib={'href': settings.MODULES[settings.M_TIMESHEETS][settings.M_URL], 'class': 'right btn-head'})
+                              attrib={'href': settings.MODULES[settings.M_TIMESHEETS][settings.M_URL], 'class': 'right btn-head border-left'})
             b.text = settings.MODULES[settings.M_TIMESHEETS][settings.M_NAME]
 
 
@@ -139,6 +157,18 @@ class BaseHTML:
     def get_form(self):
         return self.__form
 
+    def set_confirm_message(self, msg):
+        if self.__confirm_message_lab is not None:
+            self.__confirm_message_lab.text = msg
+
+    def set_message(self, msg):
+        if self.__message_lab is not None:
+            self.__message_lab.text = msg
+
+
+    # def get_script(self):
+    #     return self.__script
+
 
 def is_available_html(module):
     if not util.is_module_available(module):
@@ -153,18 +183,8 @@ def is_available_html(module):
     return html_is_available
 
 
-def _create_html_static():
-    html = render_template('test.html')
-    return html
-
-
 def get_row_color(row):
-    if row % 2 == 0:
-        color = '#E5E5E5'
-    else:
-        color = '#FFFFFF'
-
-    return color
+    return '#E5E5E5' if row % 2 == 0 else '#FFFFFF'
 
 
 def add_table_buttons(col, btn_id):
@@ -177,12 +197,17 @@ def add_table_buttons(col, btn_id):
                         })
     btn.text = 'quick_reference_all'
 
+    if util.use_modal_confirmation_dialog():
+        btn_type = 'button'
+    else:
+        btn_type = 'submit'
     btn = et.SubElement(col,
                         'button class="material-symbols-outlined btn-t-cell" title="Удалить"',
                         {
                             'style': 'padding-inline: 0px; margin-left: 0; margin-right: 0; padding-left: 1px',
                             'name': settings.DELETE_BUTTON,
                             'value': btn_id,
+                            'type': btn_type,
                         })
     btn.text = 'delete'
 
@@ -282,7 +307,6 @@ def create_info_html(i_type='', msg=(), module='', title='', url=''):
     base_html = BaseHTML(i_type, mdl)
     p = base_html.get_form()
 
-
     # Ссылка для возврата
     if url_ != '':
         ret_url = et.SubElement(p,
@@ -310,6 +334,9 @@ def create_info_html(i_type='', msg=(), module='', title='', url=''):
         div.text = msg
     else:
         if isinstance(msg, tuple) or isinstance(msg, list):
+            # Элемент с прокруткой
+            # et.SubElement(p, 'div', {'style': f'height: {FORM_HEIGHT}; overflow: auto visible;'})
+
             if isinstance(msg[0], str):  # divs
                 # util.log_debug(f'type: массив строк ({len(msg)})')
                 for m in msg:
@@ -335,6 +362,72 @@ def create_info_html(i_type='', msg=(), module='', title='', url=''):
                     row_num += 1
 
     return base_html.get_html()
+
+
+def add_confirm_dialog(body, title='', message=''):
+
+    # Dialog
+    dialog = et.SubElement(body, f'dialog id={settings.CONFIRMATION_DIALOG_ID} class="head_style dial-pos"')
+    form = et.SubElement(dialog, 'form method="POST"', {'style': 'margin-bottom: 0px'})
+    # form = et.SubElement(dialog, 'form method="dialog"')
+
+    p = et.SubElement(form, 'p')
+    # Title
+    l_title = et.SubElement(p, 'label', {'style': 'white-space: pre-wrap; border-bottom: solid 1px gray; padding-bottom: 5px'})
+    if title == '':
+        l_title.text = 'Вы действительно хотите удалить выбранный объект?'
+    else:
+        l_title.text = title
+
+    # Message
+    l_message = et.SubElement(p, 'label', {'style': 'white-space: pre-wrap; color: black; font-weight: normal;'})
+    if message != '':
+        l_message.text = message
+    else:
+        l_message.text = ''
+
+    # Confirm Buttons
+    p = et.SubElement(form, 'p class=center', {'style': 'margin-top: 10px;'})
+    # Ok
+    btn = et.SubElement(p,
+                        f'button id={settings.DELETE_BUTTON_YES_ID} name={settings.DELETE_BUTTON_YES} type="submit"',
+                        {'style': 'margin-right: 5px; width: 50px'})
+    btn.text = 'Да'
+    # Cancel
+    btn = et.SubElement(p, f'button id={settings.DELETE_BUTTON_NO_ID} type="button"',
+                        {'style': 'width: 50px'})
+    btn.text = 'Нет'
+
+    return l_message
+
+
+def add_message_dialog(body, title='', message=''):
+
+    # Dialog
+    dialog = et.SubElement(body, f'dialog id={settings.MESSAGE_DIALOG_ID} class="head_style dial-pos"')
+    form = et.SubElement(dialog, 'form method="dialog"', {'style': 'margin-bottom: 0px'})
+
+    p = et.SubElement(form, 'p', {'style': 'max-width: 500px'})
+    # Title
+    l_title = et.SubElement(p, 'label', {'style': 'white-space: pre-wrap; border-bottom: solid 1px gray; padding-bottom: 5px'})
+    if title == '':
+        l_title.text = 'Сообщение:'
+    else:
+        l_title.text = title
+
+    et.SubElement(p, 'br')
+
+    # Message
+    l_message = et.SubElement(p, 'label', {'style': 'white-space: pre-wrap; color: black; font-weight: normal;'})
+    l_message.text = message
+
+    # Ok
+    p = et.SubElement(form, 'p class=center', {'style': 'margin-top: 10px;'})
+    btn = et.SubElement(p,
+                        f'button id={settings.OK_BUTTON_ID} type="button"',
+                        {'style': 'margin-right: 5px; width: 50px'})
+    btn.text = 'Ok'
+    return l_message
 
 
 def create_delete_confirm_html(obj_id, module):
@@ -420,7 +513,9 @@ def create_delete_confirm_html(obj_id, module):
 
 # TIMESHEETS
 #
-def add_timesheets_info(form=None, tsh_entry=None):
+def add_timesheets_info(base_html, tsh_entry=None):
+
+    form = base_html.get_form()
 
     tsh_id = app.get_c_prop(settings.C_TIMESHEET_ID)
     week = app.get_c_prop(settings.C_WEEK)
@@ -553,16 +648,29 @@ def add_timesheets_info(form=None, tsh_entry=None):
     row_1 = et.SubElement(table, 'tr')
     col_table = et.SubElement(row_1, 'td colspan=5 rowspan=3 align=center', {'style': 'border: 2px solid'})  # Объединенная ячейка для таблицы
     col_btns = et.SubElement(row_1, 'td', {'align': 'center', 'valign': 'top', 'width': '50'})
+
     # Кнопка СОХРАНИТЬ
-    btn_save = et.SubElement(col_btns, 'button', attrib={'type': 'submit', 'name': settings.SAVE_BUTTON, 'value': 'submit'})
+    btn_save = et.SubElement(col_btns, 'button', {'type': 'submit', 'name': settings.SAVE_BUTTON, 'value': tsh_id})
     btn_save.text = 'сохранить'
 
     # Кнопка УДАЛИТЬ
     if tsh_id == '':
-        b_tag_name = 'button disabled'
+        btn_tag = 'button disabled'
     else:
-        b_tag_name = 'button'
-    btn_delete = et.SubElement(col_btns, b_tag_name, attrib={'type': 'submit', 'name': settings.DELETE_BUTTON, 'value': 'delete'})
+        btn_tag = f'button name={settings.DELETE_BUTTON} value={tsh_id}'
+        if util.use_modal_confirmation_dialog():  # Для показа модального окна
+            btn_tag = f'{btn_tag} type=button'
+            msg = (f'\n\t- Дата: {date}'
+                   f'\n\t- Часы: {hours}'
+                   f'\n\t- Статус: {status}'
+                   f'\n\t- Замечание: {note}'
+                   f'\n\t- Комментарий: {comment}'
+                   )
+            base_html.set_confirm_message(msg)
+        else:  # Для показа html страницы
+            btn_tag = f'{btn_tag} type=submit'
+
+    btn_delete = et.SubElement(col_btns, btn_tag)
     btn_delete.text = 'удалить'
 
     # TABLE AREA
@@ -690,7 +798,7 @@ def add_timesheet_table(data, column):
                     btn_node.text = '0'
 
 
-def create_timesheet_html():
+def create_timesheet_html(err_message=''):
     util.log_debug(f'create_timesheet_html')
     # week = util.get_current_week(host)
 
@@ -710,24 +818,18 @@ def create_timesheet_html():
         tsh_entry = data_module.get_entry(tsh_id=tsh_id)
         if tsh_entry is None:
             msg = f'create_timesheet_html: Запись tsh_id="{tsh_id}" не найдена в базе данных'
-            html_i = create_info_html(module=settings.M_TIMESHEETS, i_type=settings.INFO_TYPE_ERROR, msg=msg)
-            return html_i
+            return app.response(msg)  # Пока еще не сформирован html!!!
 
 
     # HTML
     #
-    base_html = BaseHTML('TimeSheets', settings.MODULES[settings.M_TIMESHEETS])
-    form = base_html.get_form()
+    base_html = BaseHTML('TimeSheets', settings.MODULES[settings.M_TIMESHEETS], err_message)
 
-    # INFO AREA
-    #
-    # util.log_debug(f'tsh_entry: {tsh_entry}')
-    if tsh_id != '' and tsh_entry is None:  # Зачитать и отобразить INFO запись если tsh_id есть в кэше
+    # Зачитать и отобразить INFO запись если tsh_id есть в кэше
+    if tsh_id != '' and tsh_entry is None:
         tsh_entry = data_module.get_entry(tsh_id=tsh_id)
 
-    add_timesheets_info(form=form, tsh_entry=tsh_entry)
-
-    # util.log_debug(f'str_html: {base_html.get_html()}')
+    add_timesheets_info(base_html, tsh_entry)
 
     return base_html.get_html()
 
@@ -845,7 +947,7 @@ def add_user_table(table, fields):
         n_row += 1
 
 
-def create_users_html(user_props=(), show_info=False):
+def create_users_html(user_props=(), show_info=False, err_message=''):
     # util.log_debug('create_users_html...')
 
     u_id = '' if len(user_props) == 0 or user_props[0] is None else str(user_props[0])
@@ -866,7 +968,7 @@ def create_users_html(user_props=(), show_info=False):
 
     # HTML
     #
-    base_html = BaseHTML('Users', settings.MODULES[settings.M_USERS])
+    base_html = BaseHTML('Users', settings.MODULES[settings.M_USERS], err_message)
     form = base_html.get_form()
     p = et.SubElement(form, 'p')
 
@@ -1103,30 +1205,27 @@ def create_projects_html(prj_props=(), show_info=False):
 def t_html():
     html = et.Element('html', attrib={'lang': 'ru'})
     head = et.SubElement(html, 'head')
+    et.SubElement(head, 'link', attrib={"rel": "stylesheet", "type": "text/css", "href": 'static/css/_style.css'})
     et.SubElement(head, 'link', attrib={"rel": "stylesheet", "type": "text/css", "href": 'static/css/common.css'})
     et.SubElement(head, 'link', attrib={"rel": "stylesheet", "href": 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'})
     et.SubElement(head, 'link', {"rel": "stylesheet", "href": 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined'})
 
     t_title = et.SubElement(head, 'title')
-    t_title.text = 'x'
+    t_title.text = 'test'
 
     body = et.SubElement(html, 'body')
-    form = et.SubElement(body, 'form', attrib={'name': 'form', 'method': 'POST'})
-    p = et.SubElement(form, 'p')
+    # body.text = '{% with messages = get_flashed_messages() %} {% if messages %} {% for message in messages %} {{ message }} {% endfor %} {% endif %} {% endwith %}'
+    # et.SubElement(body, "{% with messages = get_flashed_messages() %}")
 
-    btn_2 = et.SubElement(p, 'button class="material-symbols-outlined"', {'style': 'width: 25px; height: 25px; padding-inline: 0px; border: 0px'})
-    btn_2.text = 'draft_orders'
-    et.SubElement(p, 'br')
-    btn_1 = et.SubElement(p, 'button', {'style': 'background-image: url("static/img/edit.png"); width: 24px; height: 24px;'})
-    btn_1.text = '\n'
 
     s_html = et.tostring(html).decode()
     # util.log_debug(f'=={s_html}')
 
     return s_html
-## APPROVEMENT
-#
 
+
+# APPROVEMENT
+#
 def add_approvement_info(table):
     row1 = et.SubElement(table, 'tr')
 
@@ -1237,14 +1336,15 @@ def add_approvement_table(table, entries, is_clear):
 
             n_row += 1
 
-def create_approvement_html(is_clear='1'):
+
+def create_approvement_html(is_clear='1', err_message=''):
     # отлавливаем форму
     entries = data_module.get_entries_for_approval(app.get_c_prop(settings.C_USER_ID))
     # util.log_info(f'entries: {entries}')
 
     # HTML
     #
-    base_html = BaseHTML('Approvement', settings.MODULES[settings.M_APPROVEMENT])
+    base_html = BaseHTML('Approvement', settings.MODULES[settings.M_APPROVEMENT], err_message=err_message)
     form = base_html.get_form()
     p = et.SubElement(form, 'p')
 

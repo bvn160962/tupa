@@ -10,6 +10,62 @@ import settings
 logger = None
 
 
+def parse_string(s_in, res):
+
+    i_1 = s_in.find('(')
+    i_2 = s_in.find(' ')
+    if i_1 == -1 and i_2 == -1:
+        res.append(s_in)
+        # log_tmp(f'финиш: ({str(i_1)}:{str(i_2)}) - res: {res}')
+        return res
+
+    if -1 < i_1 < i_2:  # Позиция первой найденной скобки (
+        i_2 = s_in.find(')')
+        add = s_in[i_1 + 1: i_2]
+        remains = s_in[i_2 + 1:]
+        if add != '':
+            # log_tmp(f'скобка: ({str(i_1)}:{str(i_2)}) - add: {add}; remains: "{remains}"')
+            res.append(add)
+        return parse_string(remains, res)
+    else:  # Позиция первого найденного пробела
+        add = s_in[:i_2]
+        remains = s_in[i_2 + 1:]
+        if add != '':
+            # log_tmp(f'пробел: ({str(i_1)}:{str(i_2)}) - add: {add}; remains: "{remains}"')
+            res.append(add)
+        return parse_string(remains, res)
+
+
+def parse_user_agent_header(request):
+    ua_header = str(request.headers.get("User-Agent"))
+    # log_tmp(f'{ua_header}')
+    return parse_string(ua_header, [])
+
+
+def get_client_os_type(request):
+    # Windows NT 10.0 | iPad | iPhone
+    #
+    return parse_user_agent_header(request)[1].split(';')[0]
+
+
+def is_client_os_supported():
+    app.get_c_prop(settings)
+
+
+def use_modal_confirmation_dialog():
+    verdict = False
+    if settings.USE_MODAL_CONFIRMATION_DIALOG:
+        verdict = app.get_c_prop(settings.C_CLIENT_OS_TYPE) != settings.CLIENT_OS_SUPPORTED[1]
+    return verdict
+
+
+def use_message_dialog():
+    verdict = False
+    if settings.USE_MESSAGE_DIALOG:
+        verdict = app.get_c_prop(settings.C_CLIENT_OS_TYPE) != settings.CLIENT_OS_SUPPORTED[1]
+    return verdict
+
+
 # Для работы с паролями
 #
 def get_hash(s):

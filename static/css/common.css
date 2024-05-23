@@ -7,6 +7,7 @@
     --def-color: #008B8B; /* S:#008B8B,  #00008B;*/
     --def-background: #E8F0FE; /* #F0FFF0 */
     --inp-height: 25px;
+    --border-color: gray;
 }
 
 /* Задает минимальную ширину страницы (не работает!!!)
@@ -37,16 +38,25 @@ select {
 
 /*** Для p в заголовке приложения
 */
-.p_gray {
+.head_style {
     border: 2px solid grey;
     border-radius: 15px;
     background-color: #E0FFFF;
     color: var(--def-color);
     line-height: 28px;
     font-weight: bold;
+
     /*font-style:oblique;*/
     /*vertical-align: bottom;*/
     /*text-align:center;*/
+}
+
+/* Для фиксированной вверху области (в заголовке приложения)
+*/
+.sticky {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
 }
 
 /* Прижимает вправо
@@ -78,4 +88,21 @@ select {
 */
 .fit-picture {
     width: 100px;
+}
+
+/*  Позиция диалога подтверждения
+*/
+.dial-pos {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  margin-top: 100px;
+  margin-left: 200px;
+}
+
+/* Центрирование
+*/
+.center {
+  display: flex;
+  justify-content: center;
 }

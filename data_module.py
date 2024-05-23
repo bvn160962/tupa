@@ -5,10 +5,28 @@ import pg_module
 import settings
 import util_module as util
 
+
+# Увеличивает счетчик подключений (посещений)
+def set_session_count(count):
+    params = pg_module.Parameters
+    params.update_param(settings.PRM_LOGIN_COUNT, count)
+
+
+# Извлекает счетчик подключений (посещений)
+def get_session_count():
+    params = pg_module.Parameters
+    param_values = params.get_param(settings.PRM_LOGIN_COUNT)
+    if len(param_values) == 0:
+        util.log_error(f'Parameter: {settings.PRM_LOGIN_COUNT} - not found')
+        return '-1'
+    else:
+        value = getattr(param_values[0], settings.F_PRM_VALUE)
+        # util.log_tmp(f'get_session_count: {value}')
+        return value
+
+
 # TIMESHEETS
 #
-
-
 def get_entries_by_user_name(user_name):
     entries = pg_module.Entries()
     entries_data = entries.get_entries_by_user_name(user_name)
@@ -28,7 +46,7 @@ def get_entries_by_user_name(user_name):
         }
         cnt += 1
 
-    # return data
+    return data
 
 
 def get_data(user_id=None, week=None):

@@ -1,10 +1,11 @@
 import os
 import traceback
+import datetime
 
-
-from flask import Flask, request, redirect, url_for, session
+from flask import Flask, request, redirect, url_for, session, make_response
 
 import data_module
+import glob_module
 import ui_module
 import settings
 import util_module as util
@@ -12,19 +13,22 @@ import app_module as app
 
 
 application = Flask(__name__)
-application.secret_key = 'QWERTpoiuy1234509876'
+application.secret_key = os.urandom(32)  # для принудительного сброса всех сессий при перезагрузке приложения
+application.permanent = settings.S_PERMANENT
+
+if settings.S_PERMANENT:
+    application.permanent_session_lifetime = datetime.timedelta(minutes=settings.S_LIFETIME_IN_MINUTES)
 
 
-def _test():
-    # return ui_module.create_html_static()
-    return ui_module.t_html()
-    # s = settings.MODULES[settings.M_TIMESHEETS]['url']
-    # print(f'=={s}')
+# def _test():
+#     # return ui_module.create_html_static()
+#     return ui_module.t_html()
+#     # s = settings.MODULES[settings.M_TIMESHEETS]['url']
+#     # print(f'=={s}')
 
 
 #
 # SESSION Cache
-#
 def set_c_prop(key, value):
     session[key] = value
 
@@ -41,10 +45,71 @@ def clear_cache():
     session.clear()
 
 
+def new_session():
+    session.new = True
+
+
 def print_cache():
     util.log_info(f'session cache:')
     for k in session.keys():
         util.log_info(f' .. {k}={session.get(k)}')
+
+
+def response(msg='', module='', msg_type=settings.INFO_TYPE_ERROR):
+
+    if util.use_message_dialog():  # Сообщение в виде модального окна
+
+        if module == '':  # Сообщение в виде отдельного HTML
+            return ui_module.create_info_html(msg_type, msg)
+
+        if module == settings.M_APPROVEMENT:
+            resp = make_response(ui_module.create_approvement_html(err_message=msg))
+
+        if module == settings.M_TIMESHEETS:
+            resp = make_response(ui_module.create_timesheet_html(err_message=msg))
+
+        if module == settings.M_USERS:
+            resp = make_response(ui_module.create_users_html(err_message=msg))
+
+        if msg != '':
+            resp.set_cookie(settings.COOKIE_SHOW_MESSAGE, 'Yes')
+
+        return resp
+    else:  # Сообщение в виде отдельного HTML
+        return ui_module.create_info_html(msg_type, msg, module)
+
+
+
+
+
+# @application.before_request
+# def before_request():
+#     util.log_tmp(f'g: {g}; session: {len(session)}')
+#     for k in session:
+#         util.log_tmp(f'k: {k}')
+#     # g.user = None
+#     # if 'user' in session:
+#     #     g.user = session['user']
+
+#
+# CLOSE
+#
+@application.route('/close', methods=['GET'])
+def close():
+    try:
+
+        # GET
+        #
+        if request.method == 'GET':
+            util.log_info(f'On close...{request.path};')
+            # Срабатывает чаще, чем нужно: обновление, переход на другую страницу и ...
+            # glob_module.dec_session_count()
+            return f'On Close...'
+
+    except Exception as ex:
+        traceback.print_exc()
+        util.log_error(f'{ex}')
+        return ui_module.create_info_html(settings.INFO_TYPE_ERROR, f'{ex}')
 
 
 #
@@ -53,7 +118,6 @@ def print_cache():
 @application.route('/login/<module>', methods=['GET', 'POST'])
 def login(module):
     try:
-
         # GET
         #
         if request.method == 'GET':
@@ -85,6 +149,10 @@ def login(module):
                 if value == settings.LOGIN_BUTTON:
                     msg = app.check_password(values)
                     if msg == '':
+                        # Добавить сессию, для отслеживания
+                        # util.log_tmp(f'cookies: {request.cookies}')
+                        # glob_module.add_session(request.cookies.get("session"))
+
                         return redirect(url_for(module))
                     else:
                         return ui_module.craete_login_html(msg, module)
@@ -94,6 +162,7 @@ def login(module):
     except Exception as ex:
         traceback.print_exc()
         util.log_error(f'{ex}')
+        return ui_module.create_info_html(settings.INFO_TYPE_ERROR, f'{ex}', module)
 
 
 #
@@ -103,6 +172,7 @@ def login(module):
 def timesheets():
     try:
 
+        # util.log_tmp(f'timesheets.session_count: {get_session_count()}')
         values, html_test_db = app.init_module(request)
 
         if html_test_db != '':
@@ -129,12 +199,25 @@ def timesheets():
         # GET
         #
         if request.method == 'GET':
+            # for test..
+            #
+            # flash('Error')
+            # return render_template('test.html')
+            # return render_template(ui_module.t_html())
+            # return ui_module.t_html()
+            # util.log_tmp(f'test: {util.parse_user_agent_header(request)}')
+
             util.log_info(f'timesheets.GET...')
 
             # Проверить доступность модуля для роли
             html_not_available = ui_module.is_available_html(settings.M_TIMESHEETS)
             if html_not_available != '':
                 return html_not_available
+
+            # Добавить сессию, для отслеживания
+            util.log_tmp(f'cookies: {request.cookies}')
+            glob_module.add_session(request.cookies.get("session"))
+
 
             html = app.timesheets_get()
 
@@ -144,7 +227,12 @@ def timesheets():
             util.log_info(f'timesheets.POST...')
             html = app.timesheets_post(values)
 
-        return html #'nothing', 204
+        # return html #'nothing', 204
+        # util.log_tmp(f'isResponse: {isinstance(html, Response)}')
+        # resp = make_response(html)
+        # resp.set_cookie(settings.COOKIE_SHOW_MESSAGE, 'Текст сообщения')
+        # return resp
+        return html
 
     except Exception as ex:
         traceback.print_exc()
@@ -297,6 +385,7 @@ if __name__ == '__main__':
     #
     # sudo gunicorn -b 0.0.0.0:1000 -w 1 app:application
     if settings.IS_WINDOWS:
-        util.log_info(f'app:application starting...')
+        util.log_info(f'app:application: {application.permanent}; {application.permanent_session_lifetime}')
+
         application.run(debug=True, port=1000, host='0.0.0.0')
 

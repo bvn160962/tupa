@@ -2,12 +2,26 @@ import logging
 import sys
 
 # Для отладки - вход без регистрации
-DBG_DO_LOGIN = True
+DBG_DO_LOGIN = False
 DBG_USER_ID = 102
 DBG_USER_NAME = 'user'
 DBG_USER_ROLE = 'Administrator'
 
 SHOW_EMPTY_WEEK = False
+
+# Показывать диалог подтверждения удаления в виде модального окна
+USE_MODAL_CONFIRMATION_DIALOG = True
+CONFIRMATION_DIALOG_ID = 'confirm_dialog_id'
+
+# Показывать сообщение в виде модального окна
+USE_MESSAGE_DIALOG = True
+MESSAGE_DIALOG_ID = 'message_dialog_id'
+OK_BUTTON_ID = 'message_dialog_ok_btn_id'
+
+# Имя ключа куки для передачи сообщения
+COOKIE_SHOW_MESSAGE = 'showMessage'
+
+CLIENT_OS_SUPPORTED = ('Windows', 'iPad', 'iPhone')
 
 IS_WINDOWS = (sys.platform == 'win32')
 if IS_WINDOWS:
@@ -21,6 +35,10 @@ LOG_FILE_LEVEL = logging.DEBUG
 
 LOG_FILE_FORMAT = '%(asctime)s %(levelname)s: %(message)s'
 # LOG_FILE_FORMAT = '%(asctime)s %(funcName)s, line %(lineno)s: %(message)s'
+
+# SESSION
+S_PERMANENT = False
+S_LIFETIME_IN_MINUTES = 15
 
 # Список ролей
 #
@@ -90,6 +108,7 @@ C_TIMESHEET_ID = 'c_timesheet_id'
 C_DATE = 'c_date'
 C_WEEK = 'c_week'
 C_TSH_BTN_VALUE = 'c_tsh_btn_value'
+C_CLIENT_OS_TYPE = 'c_client_os_type'
 
 # Name для кнопок
 #
@@ -98,8 +117,11 @@ SAVE_BUTTON = 'save_btn'
 NEW_BUTTON = 'new_btn'
 REF_BUTTON = 'reference_btn'
 DELETE_BUTTON = 'delete_btn'
+DELETE_BUTTON_ID = 'delete_btn_id'
 DELETE_BUTTON_YES = 'delete_btn_yes'
+DELETE_BUTTON_YES_ID = 'delete_btn_yes_id'
 DELETE_BUTTON_NO = 'delete_btn_no'
+DELETE_BUTTON_NO_ID = 'delete_btn_no_id'
 WEEK_BUTTON_SELECT = 'week_btn'
 WEEK_BUTTON_NEXT = 'next_week_btn'
 WEEK_BUTTON_PREV = 'prev_week_btn'
@@ -152,6 +174,12 @@ F_USR_MAIL = 'usr_mail'
 F_USR_INFO = 'usr_info'
 F_USR_ALL = f'{F_USR_NAME}, {F_USR_ROLE}, {F_USR_PASSWORD}, {F_USR_MAIL}, {F_USR_INFO}'
 F_USR_ALL_ID = f'{F_USR_ID}, {F_USR_ALL}'
+
+# Атрибуты таблицы <ts_parameters>
+#
+F_PRM_NAME = 'prm_name'
+F_PRM_VALUE = 'prm_value'
+PRM_LOGIN_COUNT = 'login_count'
 
 # Название словаря свойств Timesheet Entry
 FLD_TSH_DICT = 'data'

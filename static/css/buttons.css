@@ -83,3 +83,17 @@ button {
     margin-left: 5px;
 }
 
+/*
+*/
+.border-left {
+    border-left:1px solid var(--border-color);
+    padding-left:15px;
+}
+
+/*
+*/
+.border-right {
+    border-right:1px solid var(--border-color);
+    padding-right:15px;
+}
+

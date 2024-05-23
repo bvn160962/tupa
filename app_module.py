@@ -1,6 +1,9 @@
-from flask import redirect, url_for
+import os
+
+from flask import redirect, url_for, Response, make_response
 
 import app
+import glob_module
 import pg_module
 import util_module as util
 import settings
@@ -45,6 +48,13 @@ def init_module(request):
     # Определить ip адрес
     # ip = get_client_ip(request)
 
+    # Определить тип ОС браузера
+    os_type = app.get_c_prop(settings.C_CLIENT_OS_TYPE)
+    if os_type == '':
+        os_type = util.get_client_os_type(request)
+        app.set_c_prop(settings.C_CLIENT_OS_TYPE, os_type)
+    util.log_debug(f'Тип ОС браузера: {os_type}')
+
     # Получить значения формы
     values = request.form
     util.log_debug(f'FORM={values}')
@@ -67,6 +77,7 @@ def init_module(request):
 def check_password(values):
     err_msg = 'Неправильно введен логин или пароль!'
     # util.set_user_name(ip, '')
+    # app.clear_cache()
     app.set_c_prop(settings.C_USER_NAME, '')
 
     usr_name = ''
@@ -91,6 +102,14 @@ def check_password(values):
             if pwd_in == pwd_db:
                 err_msg = ''
 
+                # Увеличить счетчик текущих сессий - сбрасывается при рестарте приложения
+                glob_module.inc_session_count()
+
+                # Увеличить счетчик сессий (посещений) - сбрасывается только "руками"
+                cnt = int(data_module.get_session_count())
+                cnt += 1
+                data_module.set_session_count(cnt)
+
                 app.set_c_prop(settings.C_USER_ID, user[0])
                 app.set_c_prop(settings.C_USER_NAME, usr_name)
                 app.set_c_prop(settings.C_USER_ROLE, user[1])
@@ -101,12 +120,14 @@ def check_password(values):
 
 def logoff(module):
     # util.log_debug(f'Logoff')
-    app.clear_cache()
+    glob_module.dec_session_count()
+    # app.new_session()
 
     return redirect(url_for(settings.M_LOGIN, module=module))
 
 
 def debug(module):
+    util.log_tmp(f'sessions: {glob_module.get_sessions()}')
     title = 'Содержимое переменных текущей сессии'
     s_list = [
         ('Имя переменной', 'Значение'),
@@ -119,8 +140,12 @@ def debug(module):
         (settings.C_USER_ID, str(app.get_c_prop(settings.C_USER_ID))),
         (settings.C_USER_NAME, str(app.get_c_prop(settings.C_USER_NAME))),
         (settings.C_USER_ROLE, str(app.get_c_prop(settings.C_USER_ROLE))),
+        (settings.C_CLIENT_OS_TYPE, str(app.get_c_prop(settings.C_CLIENT_OS_TYPE))),
         ('*** SETTINGS ***', ''),
         ('DBG_DO_LOGIN', str(settings.DBG_DO_LOGIN)),
+        ('S_PERMANENT', str(app.application.permanent)),
+        ('S_LIFETIME_IN_MINUTES', str(app.application.permanent_session_lifetime)),
+        ('S_SESSION_COUNT', str(glob_module.get_session_count())),
         ('SHOW_EMPTY_WEEK', str(settings.SHOW_EMPTY_WEEK)),
         ('IS_WINDOWS', str(settings.IS_WINDOWS)),
         ('LOG_DIR', str(settings.LOG_DIR)),
@@ -139,6 +164,8 @@ def debug(module):
         s_list.append(('DB_VERSION', str(pg_module.DB_CONNECT.server_version)))
         s_list.append(('DB_STATUS', str(pg_module.DB_CONNECT.status)))
         s_list.append(('DB_TR_STATUS', str(pg_module.DB_CONNECT.get_transaction_status())))
+        s_list.append(('*** DB PARAMETERS ***', ''))
+        s_list.append(('LOGIN_COUNT', str(data_module.get_session_count())))
 
 
     return ui_module.create_info_html(settings.INFO_TYPE_INFORMATION, s_list, module, title)
@@ -201,19 +228,20 @@ def timesheets_update():
         return ui_module.create_timesheet_html()
 
     except Exception as ex:
-        return ui_module.create_info_html(settings.INFO_TYPE_ERROR, f'{ex}', settings.M_TIMESHEETS)
+        return app.response(f'{ex}', settings.M_TIMESHEETS)
 
 
-def timesheets_save(values=None):
+def timesheets_save(values):
     try:
         # util.log_info(f'Нажата кнопка Save: {values}')
 
-        html = ''
-        tsh_id = app.get_c_prop(settings.C_TIMESHEET_ID)
+        # tsh_id = app.get_c_prop(settings.C_TIMESHEET_ID)
         # Прочитать значения из формы (values = request.form)
         #
-        prj_id, inp_hours, inp_note, inp_status, current_date, comment = '', '', '', '', '', ''
+        tsh_id, prj_id, inp_hours, inp_note, inp_status, current_date, comment = '', '', '', '', '', '', ''
         for value in values:
+            if value == settings.SAVE_BUTTON:
+                tsh_id = values[value]
             if value == ui_module.SELECT_PROJECT_NAME:
                 prj_id = values[value]
             if value == ui_module.INPUT_HOURS_NAME:
@@ -228,12 +256,12 @@ def timesheets_save(values=None):
                 comment = values[value]
 
         if tsh_id == '':
-            # Новая запись timeshhets (Insert)
+            # Новая запись - Insert
             #
             if prj_id == '' or current_date == '' or inp_hours == '':
-                msg = f'Не задано одно из обязательных значений атрибутов (prj_id={prj_id}, date={current_date}, hours={inp_hours}) при попытке создать новую запись!'
+                msg = f'Не задано одно из обязательных значений атрибутов:\n\t- prj_id={prj_id};\n\t- date={current_date};\n\t- hours={inp_hours}; \nпри попытке создать новую запись!'
                 util.log_debug(msg)
-                html = ui_module.create_info_html(settings.INFO_TYPE_WARNING, msg, module=settings.M_TIMESHEETS)
+                return app.response(msg, settings.M_TIMESHEETS)
             else:
                 data_module.insert_entry(
                     user_id=app.get_c_prop(settings.C_USER_ID),
@@ -247,7 +275,7 @@ def timesheets_save(values=None):
                     }
                 )
         else:
-            # Существующая запись timeshhets (Update)
+            # Существующая запись - Update
             #
             data_module.update_entry(
                 tsh_id=tsh_id,
@@ -259,26 +287,26 @@ def timesheets_save(values=None):
                 }
             )
 
-        return html
+        return ''
 
     except Exception as ex:
-        return ui_module.create_info_html(settings.INFO_TYPE_ERROR, f'{ex}', settings.M_TIMESHEETS)
+        return app.response(f'{ex}', settings.M_TIMESHEETS)
 
 
-def timesheets_delete():
+def timesheets_delete(tsh_id):
     try:
-        tsh_id = app.get_c_prop(settings.C_TIMESHEET_ID)
+        # tsh_id = app.get_c_prop(settings.C_TIMESHEET_ID)
         util.log_debug(f'pressed_delete_button: Delete entry: tsh_id={tsh_id}')
 
         if tsh_id != '':
             data_module.delete_entry(tsh_id=tsh_id)
             app.set_c_prop(settings.C_TIMESHEET_ID, '')  # убрать tsh_id из кэша
+            return ''
         else:
             raise Exception('Попытка удалить запись с пустым tsh_id')
 
-
     except Exception as ex:
-        return ui_module.create_info_html(settings.INFO_TYPE_ERROR, f'{ex}', settings.M_TIMESHEETS)
+        return app.response(f'{ex}', settings.M_TIMESHEETS)
 
 
 # GET
@@ -317,7 +345,7 @@ def timesheets_post(values):
         # Нажата кнопка SAVE Entry
         #
         if value == settings.SAVE_BUTTON:
-            html_e = timesheets_save(values=values)
+            html_e = timesheets_save(values)
             if html_e != '':
                 return html_e
             html = ui_module.create_timesheet_html()
@@ -325,8 +353,9 @@ def timesheets_post(values):
         # Нажата кнопка DELETE YES
         #
         if value == settings.DELETE_BUTTON_YES:
-            timesheets_delete()
-            html = ui_module.create_timesheet_html()
+            html = timesheets_delete(values[value])
+            if html == '':
+                html = ui_module.create_timesheet_html()
 
         # Нажата кнопка DELETE NO
         #
@@ -473,7 +502,7 @@ def projects_ref_button(prj_id):
     if len(e_list) == 0:
         return ui_module.create_info_html(settings.INFO_TYPE_INFORMATION, f'Нет записей учета отработанного времени на проекте "{prj_name}".', settings.M_PROJECTS)
     else:
-        title = f'Записи из учета отработанного времени на проекте "{prj_name}"'
+        title = f'Записи учета отработанного времени на проекте "{prj_name}"'
         e_list.insert(0, ('Дата', 'Статус', 'Комментарий', 'Исполнитель'))  # Заголовок таблицы
         return ui_module.create_info_html(settings.INFO_TYPE_INFORMATION, e_list, settings.M_PROJECTS, title)
 
@@ -558,7 +587,7 @@ def users_update():
         return ui_module.create_users_html()
 
     except Exception as ex:
-        return ui_module.create_info_html(settings.INFO_TYPE_ERROR, f'{ex}', settings.M_USERS)
+        return app.response(f'{ex}', settings.M_USERS)
 
 
 def users_select(usr_id):
@@ -570,7 +599,7 @@ def users_select(usr_id):
         return ui_module.create_users_html(usr_props)
 
     except Exception as ex:
-        return ui_module.create_info_html(settings.INFO_TYPE_ERROR, f'{ex}', settings.M_USERS)
+        return app.response(f'{ex}', settings.M_USERS)
 
 
 def users_save(usr_id, props):
@@ -597,31 +626,29 @@ def users_save(usr_id, props):
             # util.log_debug('Insert')
             # Проверка атрибутов
             if u_name == '' or u_pwd == '':
-                msg = 'Не заполнен один из обязательных атрибутов: Имя или Пароль пользователя!'
-                return ui_module.create_info_html(settings.INFO_TYPE_ERROR, msg, settings.M_USERS)
+                msg = 'Атрибуты:\n\t- Имя пользователя;\n\t- Пароль пользователя;\nдолжны быть заполнены!'
+                return app.response(msg, settings.M_USERS)
             usr_props = (usr_id, u_name, u_role, util.get_hash(u_pwd), u_mail, u_info)
             data_module.insert_user(usr_props)
         else:  # Обновить существующего пользователя
             # util.log_debug('Update')
             # Проверка атрибутов
             if u_name == '':
-                msg = 'Атрибут Имя пользователя должен быть заполнен!'
-                return ui_module.create_info_html(settings.INFO_TYPE_ERROR, msg, settings.M_USERS)
+                msg = 'Атрибут "Имя пользователя" должен быть заполнен!'
+                return app.response(msg, settings.M_USERS)
             if u_pwd != '':
                 u_pwd = util.get_hash(u_pwd)
             usr_props = (usr_id, u_name, u_role, u_pwd, u_mail, u_info)
             data_module.update_user(usr_props)
 
-        return ui_module.create_users_html(())
-        # return ui_module.create_users_html(host, usr_props)
+        # return ui_module.create_users_html(())
+        return app.response(module=settings.M_USERS)
 
     except Exception as ex:
-        return ui_module.create_info_html(settings.INFO_TYPE_ERROR, f'{ex}', settings.M_USERS)
+        return app.response(f'{ex}', settings.M_USERS)
 
 
 def users_new():
-    # util.log_debug(f'Нажата кнопка New User')
-
     return ui_module.create_users_html((), True)
 
 
@@ -629,10 +656,10 @@ def users_delete(usr_id):
     try:
         util.log_debug(f'Нажата кнопка Delete User: usr_id={usr_id}')
         data_module.delete_user(usr_id)
-        return ui_module.create_users_html('')
+        return app.response(module=settings.M_USERS)
 
     except Exception as ex:
-        return ui_module.create_info_html(settings.INFO_TYPE_ERROR, f'{ex}', settings.M_USERS)
+        return app.response(f'{ex}', settings.M_USERS)
 
 
 def users_ref_button(usr_id):
@@ -640,12 +667,10 @@ def users_ref_button(usr_id):
     usr_name = usr[1]
     # util.log_debug(f'Нажата кнопка Project Reference: {usr_id}; {usr_name}')
 
-    title = f'Ссылки на пользователя "{usr_name}"'
-
     obj_list = data_module.where_user_refs(usr_id)
 
     if len(obj_list) == 0:
-        return ui_module.create_info_html(settings.INFO_TYPE_INFORMATION, f'На пользователя "{usr_name}" ссылок нет.', settings.M_USERS)
+        return app.response(f'На пользователя "{usr_name}" ссылок нет.', settings.M_USERS)
     else:
         title = f'Ссылки на пользователя "{usr_name}"'
         obj_list.insert(0, ('Проект', 'Куда ссылается', 'Участие',))  # Заголовок таблицы
@@ -726,28 +751,36 @@ def users_post(values):
 #
 # Отработка списка на согласование
 def agreed(values):
-    msg = ''
-    tsh_id_list = []
-    for key in values:
-        if key == 'feedback':
-            msg = values[key]
-        elif values[key] == 'on':
-            tsh_id_list.append(int(key))
-    data_module.update_status(tuple(tsh_id_list), True, msg)
-    return ui_module.create_approvement_html()
+    try:
+        msg = ''
+        tsh_id_list = []
+        for key in values:
+            if key == 'feedback':
+                msg = values[key]
+            elif values[key] == 'on':
+                tsh_id_list.append(int(key))
+        data_module.update_status(tuple(tsh_id_list), True, msg)
+        return ui_module.create_approvement_html()
+
+    except Exception as ex:
+        return app.response(f'{ex}', settings.M_APPROVEMENT)
 
 
 # Отработка списка на отклонение
 def rejected(values):
-    msg = ''
-    tsh_id_list = []
-    for key in values:
-        if key == 'feedback':
-            msg = values[key]
-        elif values[key] == 'on':
-            tsh_id_list.append(int(key))
-    data_module.update_status(tuple(tsh_id_list), False, msg)
-    return ui_module.create_approvement_html()
+    try:
+        msg = ''
+        tsh_id_list = []
+        for key in values:
+            if key == 'feedback':
+                msg = values[key]
+            elif values[key] == 'on':
+                tsh_id_list.append(int(key))
+        data_module.update_status(tuple(tsh_id_list), False, msg)
+        return ui_module.create_approvement_html()
+
+    except Exception as ex:
+        return app.response(f'{ex}', settings.M_APPROVEMENT)
 
 
 def approvement_update():
@@ -757,12 +790,14 @@ def approvement_update():
         return ui_module.create_approvement_html()
 
     except Exception as ex:
-        return ui_module.create_info_html(settings.INFO_TYPE_ERROR, f'{ex}', settings.M_APPROVEMENT)
+        return app.response(f'{ex}', settings.M_APPROVEMENT)
+
 
 # GET
 #
 def approvement_get():
     return ui_module.create_approvement_html()
+
 
 def approvement_post(values):
     html = ''
